@@ -10,7 +10,7 @@
 main :: ()
 {
     random_seed(cast,force(Some_Big_Time_Value)current_time_consensus());
-    
+
     screen_width: s32 = 1280;
     screen_height: s32 = 720;
 
@@ -49,6 +49,8 @@ main :: ()
             g := random_get_zero_to_one_open() * 255;
             b := random_get_zero_to_one_open() * 255;
             piece.color = Color.{xx r, xx g, xx b, 255};
+
+            rotate_body(piece, .{0, 0, 1}, random_get_within_range(0, 180));
         }
 
         simulate_world(*world);
