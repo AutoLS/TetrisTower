@@ -51,21 +51,36 @@ is_cell_filled :: (cells: [..] Vector2, r: int, c: int) -> bool
     return false;
 }
 
+Cell_Bounds :: struct
+{
+    min_r, max_r, min_c, max_c: int;
+    width, height: int;
+}
+
+get_cell_bounds :: (cells: [..] Vector2) -> Cell_Bounds
+{
+    b: Cell_Bounds;
+    b.min_r = 9999; b.max_r = -9999; b.min_c = 9999; b.max_c = -9999;
+    for c : cells
+    {
+        b.min_r = min(b.min_r, cast(int)c.x);
+        b.max_r = max(b.max_r, cast(int)c.x);
+        b.min_c = min(b.min_c, cast(int)c.y);
+        b.max_c = max(b.max_c, cast(int)c.y);
+    }
+    b.height = b.max_r - b.min_r + 1;
+    b.width  = b.max_c - b.min_c + 1;
+    return b;
+}
+
 make_cell_pieces :: (cells: [..] Vector2, cell: float) -> [..] Rect_Piece
 {
     pieces: [..] Rect_Piece;
     pieces.allocator = temp;
 
-    min_r := 9999; max_r := -9999; min_c := 9999; max_c := -9999;
-    for c : cells
-    {
-        min_r = min(min_r, cast(int)c.x);
-        max_r = max(max_r, cast(int)c.x);
-        min_c = min(min_c, cast(int)c.y);
-        max_c = max(max_c, cast(int)c.y);
-    }
-    height := max_r - min_r + 1;
-    width  := max_c - min_c + 1;
+    bounds := get_cell_bounds(cells);
+    min_r := bounds.min_r; max_r := bounds.max_r; min_c := bounds.min_c; max_c := bounds.max_c;
+    height := bounds.height; width := bounds.width;
 
     for row : min_r .. max_r
     {
@@ -96,6 +111,47 @@ make_cell_pieces :: (cells: [..] Vector2, cell: float) -> [..] Rect_Piece
     }
 
     return pieces;
+}
+
+QUEUE_PREVIEW_COUNT :: 3;
+
+Piece_Queue :: struct
+{
+    pieces: [..] Tetromino;
+}
+
+// Fisher-Yates shuffle of one of each Tetromino type ("7-bag"), appended to the queue.
+// Random.jai has no shuffle/pick-without-replacement helper, so this is hand-rolled on top of random_get().
+refill_bag :: (queue: *Piece_Queue)
+{
+    bag: [..] Tetromino;
+    bag.allocator = temp;
+
+    count := enum_highest_value(Tetromino) + 1;
+    for i : 0..count-1 array_add(*bag, cast(Tetromino)i);
+
+    for i : 0..bag.count-2
+    {
+        j := i + cast(int)(random_get() % cast(u64)(bag.count - i));
+        t := bag[i];
+        bag[i] = bag[j];
+        bag[j] = t;
+    }
+
+    for bag array_add(*queue.pieces, it);
+}
+
+init_piece_queue :: (queue: *Piece_Queue)
+{
+    while queue.pieces.count < QUEUE_PREVIEW_COUNT refill_bag(queue);
+}
+
+dequeue_piece :: (queue: *Piece_Queue) -> Tetromino
+{
+    result := queue.pieces[0];
+    array_ordered_remove_by_index(*queue.pieces, 0);
+    while queue.pieces.count < QUEUE_PREVIEW_COUNT refill_bag(queue);
+    return result;
 }
 
 add_tetromino :: (using world: *Simulated_World, type: Tetromino, p: Vector3, cell: float, mass: float, friction: float = 0.5) -> *Rigid_Body

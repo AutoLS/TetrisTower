@@ -24,7 +24,10 @@ main :: ()
     camera.zoom = -1.0;
 
     world: Simulated_World;
-    
+
+    queue: Piece_Queue;
+    init_piece_queue(*queue);
+
     floor := add_body(*world, .{screen_width/2.0, 0, 0}, .{}, .{xx screen_width, 50, 0}, 0);
     floor.color = GRAY;
     floor.friction = 0.9;
@@ -42,15 +45,13 @@ main :: ()
             p.x = (screen_width - p.x);
             p.y = (screen_height - p.y);
 
-            piece_type := random_get_zero_to_one_open() * (enum_highest_value(Tetromino)+1);
-            
-            piece := add_tetromino(*world, cast(Tetromino)piece_type, .{p.x, p.y, 0}, 50, 50);
+            piece_type := dequeue_piece(*queue);
+
+            piece := add_tetromino(*world, piece_type, .{p.x, p.y, 0}, 50, 50);
             r := random_get_zero_to_one_open() * 255;
             g := random_get_zero_to_one_open() * 255;
             b := random_get_zero_to_one_open() * 255;
             piece.color = Color.{xx r, xx g, xx b, 255};
-
-            rotate_body(piece, .{0, 0, 1}, random_get_within_range(0, 180));
         }
 
         simulate_world(*world);
@@ -72,6 +73,8 @@ main :: ()
         }
             
         EndMode2D();
+
+        draw_piece_queue(queue);
 
         EndDrawing();
     }
