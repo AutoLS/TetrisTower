@@ -35,11 +35,7 @@ main :: ()
         render_game(*game);
 
         draw_piece_queue(queue);
-
-        if game_over
-        {
-            draw_game_over(screen_width, screen_height);
-        }
+        draw_hud(*game);
 
         EndDrawing();
     }

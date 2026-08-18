@@ -66,6 +66,8 @@ QUEUE_MARGIN_Y :: 20;
 QUEUE_BOX_SIZE :: 90;
 QUEUE_CELL_SIZE :: 16;
 
+HUD_MARGIN :: 20;
+
 // A piece's cell layout is a fixed constant per Tetromino type, so it's computed once here
 // and reused, instead of calling get_tetromino_cells (which does fresh temp allocations) every frame.
 tetromino_preview_cells: [7] [..] Vector2;
@@ -93,16 +95,6 @@ center_offset :: (container_size: s32, content_size: s32) -> s32
     return (container_size - content_size) / 2;
 }
 
-draw_game_over :: (screen_width: s32, screen_height: s32)
-{
-    text := "GAME OVER";
-    font_size: s32 = 48;
-    text_width := MeasureText(get_c_string(text), font_size);
-    x := center_offset(screen_width, text_width);
-    y := center_offset(screen_height, font_size);
-    DrawText(get_c_string(text), x, y, font_size, RED);
-}
-
 draw_piece_queue :: (queue: Piece_Queue)
 {
     DrawText(get_c_string("NEXT"), QUEUE_MARGIN_X, QUEUE_MARGIN_Y, 24, BLACK);
@@ -126,5 +118,33 @@ draw_piece_queue :: (queue: Piece_Queue)
             py: s32 = xx (box_y + offset_y + (cast(int)c.x - bounds.min_r) * QUEUE_CELL_SIZE);
             DrawRectangle(px, py, QUEUE_CELL_SIZE - 2, QUEUE_CELL_SIZE - 2, DARKGRAY);
         }
+    }
+}
+
+draw_text_right_aligned :: (text: string, y: s32, font_size: s32, color: Color, screen_width: s32)
+{
+    width := MeasureText(get_c_string(text), font_size);
+    DrawText(get_c_string(text), screen_width - width - HUD_MARGIN, y, font_size, color);
+}
+
+draw_hud :: (game: *Game)
+{
+    font_size: s32 = 24;
+
+    hp_text := tprint("HP: %", game.hp);
+    draw_text_right_aligned(hp_text, HUD_MARGIN, font_size, BLACK, game.screen_width);
+
+    height_cells := cast(int)(get_tower_top(game) / CELL_SIZE);
+    height_text := tprint("Height: %", height_cells);
+    draw_text_right_aligned(height_text, HUD_MARGIN + font_size + 6, font_size, BLACK, game.screen_width);
+
+    if is_game_over(game)
+    {
+        game_over_font_size: s32 = 48;
+        msg := "GAME OVER";
+        msg_width := MeasureText(get_c_string(msg), game_over_font_size);
+        msg_x := center_offset(game.screen_width, msg_width);
+        msg_y := center_offset(game.screen_height, game_over_font_size);
+        DrawText(get_c_string(msg), msg_x, msg_y, game_over_font_size, RED);
     }
 }
