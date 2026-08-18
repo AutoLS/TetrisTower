@@ -17,6 +17,15 @@ main :: ()
     InitWindow(screen_width, screen_height, "Tetris Tower");
     defer CloseWindow();
 
+    block_texture := LoadTexture("ast/tetris-Sheet.png");
+    block_texture_rects: [#run enum_highest_value(Block_Color_Type)+1] Rectangle;
+    for *block_texture_rects
+    {
+        x := it_index * 16;
+        << it = .{cast(float)x, 0, 16, 16};
+    }
+    tetris_pieces: [..] Tetris_Piece;
+
     camera: Camera2D;
     camera.target = .{};
     camera.offset = .{xx screen_width, xx screen_height};
@@ -25,12 +34,13 @@ main :: ()
 
     world: Simulated_World;
     
-    floor := add_body(*world, .{screen_width/2.0, 0, 0}, .{}, .{xx screen_width, 50, 0}, 0);
+    floor_index := add_body(*world, .{screen_width/2.0, 0, 0}, .{}, .{xx screen_width, 50, 0}, 0);
+    floor := *world.bodies[floor_index];
     floor.color = GRAY;
     floor.friction = 0.9;
 
-    wall1 := add_body(*world, .{0, screen_height/2.0, 0}, .{}, .{50, xx screen_height, 0}, 0);
-    wall2 := add_body(*world, .{xx screen_width, screen_height/2.0, 0}, .{}, .{50, xx screen_height, 0}, 0);
+    wall1_index := add_body(*world, .{0, screen_height/2.0, 0}, .{}, .{50, xx screen_height, 0}, 0);
+    wall2_index := add_body(*world, .{xx screen_width, screen_height/2.0, 0}, .{}, .{50, xx screen_height, 0}, 0);
 
     SetTargetFPS(120);
 
@@ -44,13 +54,16 @@ main :: ()
 
             piece_type := random_get_zero_to_one_open() * (enum_highest_value(Tetromino)+1);
             
-            piece := add_tetromino(*world, cast(Tetromino)piece_type, .{p.x, p.y, 0}, 50, 50);
+            body_index := add_tetromino(*world, cast(Tetromino)piece_type, .{p.x, p.y, 0}, 50, 50);
+            piece := *world.bodies[body_index];
             r := random_get_zero_to_one_open() * 255;
             g := random_get_zero_to_one_open() * 255;
             b := random_get_zero_to_one_open() * 255;
             piece.color = Color.{xx r, xx g, xx b, 255};
 
             rotate_body(piece, .{0, 0, 1}, random_get_within_range(0, 180));
+
+            array_add(*tetris_pieces, .{body_index, xx piece_type, xx piece_type});
         }
 
         simulate_world(*world);
@@ -67,8 +80,16 @@ main :: ()
         {
             for s : it.shapes
             {
-                draw_convex_shape(s, color=it.color);
+                if it.inverse_mass == 0
+                {
+                    draw_convex_shape(s, color=it.color);
+                }
             }
+        }
+
+        for tetris_pieces 
+        {
+            draw_tetromino_cells_v2(block_texture, it.type, *world.bodies[it.body_index], 50, block_texture_rects[xx it.type]);
         }
             
         EndMode2D();
