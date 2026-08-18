@@ -37,6 +37,49 @@ is_spawn_blocked :: (world: *Simulated_World, type: Tetromino, spawn_pos: Vector
     return false;
 }
 
+// Simple per-shape straight-down projection used for the ghost/landing indicator: for each of
+// the falling piece's shapes, find the highest surface directly below it (by x-overlap, among
+// every other body not in `exclude`) and return the smallest resulting drop distance across all
+// shapes - i.e. the first point of contact, same idea as a classic hard-drop preview. This
+// ignores how real physics would actually settle the piece (tipping, sliding, deflection) by design.
+compute_landing_offset :: (world: *Simulated_World, piece_index: int, exclude: [] int) -> float
+{
+    piece := world.bodies[piece_index];
+
+    other_aabbs: [..] AABB;
+    other_aabbs.allocator = temp;
+
+    for body_index : 0..world.bodies.count-1
+    {
+        if body_index == piece_index || array_find(exclude, body_index) continue;
+
+        for other : world.bodies[body_index].shapes
+            array_add(*other_aabbs, get_aabb(other));
+    }
+
+    best_offset := -FLOAT32_MAX;
+
+    for s : piece.shapes
+    {
+        s_aabb := get_aabb(s);
+        surface_y := -FLOAT32_MAX;
+
+        for o_aabb : other_aabbs
+        {
+            // Only a surface actually beneath this shape's bottom edge can support it - an AABB
+            // that merely shares its x-range (e.g. from a tilted, settled piece whose bounding
+            // box overhangs its real footprint) is not a valid landing candidate.
+            if o_aabb.max.y <= s_aabb.min.y && s_aabb.min.x <= o_aabb.max.x && s_aabb.max.x >= o_aabb.min.x
+                surface_y = max(surface_y, o_aabb.max.y);
+        }
+
+        drop := surface_y - s_aabb.min.y;
+        best_offset = max(best_offset, drop);
+    }
+
+    return best_offset;
+}
+
 main :: ()
 {
     random_seed(cast,force(Some_Big_Time_Value)current_time_consensus());
@@ -172,7 +215,17 @@ main :: ()
 
         BeginMode2D(camera);
 
-        for world.bodies 
+        if current_piece_index != -1
+        {
+            piece := *world.bodies[current_piece_index];
+            ghost_offset := Vector3.{0, compute_landing_offset(*world, current_piece_index, .[wall1_index, wall2_index]), 0};
+            ghost_color := Color.{piece.color.r, piece.color.g, piece.color.b, 200};
+
+            for s : piece.shapes
+                draw_convex_shape_outline(s, offset=ghost_offset, color=ghost_color);
+        }
+
+        for world.bodies
         {
             for s : it.shapes
             {

@@ -9,6 +9,17 @@ draw_convex_shape :: (shape: Convex_Shape, offset: Vector3 = .{}, color: Color =
     }
 }
 
+draw_convex_shape_outline :: (shape: Convex_Shape, offset: Vector3 = .{}, color: Color = WHITE, thickness: float = 2.0)
+{
+    count := shape.global_vertices.count;
+    for i : 0..count-1
+    {
+        a := shape.global_vertices[i];
+        b := shape.global_vertices[(i + 1) % count];
+        DrawLineEx(.{offset.x + a.x, offset.y + a.y}, .{offset.x + b.x, offset.y + b.y}, thickness, color);
+    }
+}
+
 QUEUE_MARGIN_X :: 80; // clears the left wall, which otherwise clips the "NEXT" label
 QUEUE_MARGIN_Y :: 20;
 QUEUE_BOX_SIZE :: 90;
