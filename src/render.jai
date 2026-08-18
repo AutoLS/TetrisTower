@@ -10,7 +10,7 @@ draw_convex_shape :: (shape: Convex_Shape, offset: Vector3 = .{}, color: Color =
 }
 
 // Auto: This is kinda expensive since we have to render each individual cell.. We can optimize it by rendering merged shapes but then we have to modify the textures and that's kinda pain in the ass...
-draw_tetromino_cells :: (tex: Texture2D, type: Tetromino, body: *Rigid_Body, cell_size: float, src: Rectangle)
+draw_tetromino_cells :: (tex: Texture2D, type: Tetromino, body: *Rigid_Body, cell_size: float, src: Rectangle, offset: Vector3 = .{}, alpha: u8 = 255)
 {
     cells := get_tetromino_cells(type);
     angle := quat_to_z_angle(body.orientation);
@@ -41,12 +41,12 @@ draw_tetromino_cells :: (tex: Texture2D, type: Tetromino, body: *Rigid_Body, cel
         cx := (cast(float)(col - min_c) + 0.5 - w*0.5 - com_x) * cell_size;
         cy := (cast(float)(max_r - row) + 0.5 - h*0.5 - com_y) * cell_size;
 
-        center := body.position + rotate(body.orientation, Vector3.{ cx, cy, 0 });
+        center := body.position + offset + rotate(body.orientation, Vector3.{ cx, cy, 0 });
 
         dest   := Rectangle.{ center.x, center.y, cell_size, cell_size };
         origin := Vector2.{ cell_size*0.5, cell_size*0.5 };
 
-        DrawTexturePro(tex, src, dest, origin, angle, WHITE);
+        DrawTexturePro(tex, src, dest, origin, angle, .{255, 255, 255, alpha});
     }
 }
 

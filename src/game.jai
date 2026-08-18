@@ -13,6 +13,7 @@ Game :: struct
     screen_width, screen_height: s32;
 
     current_piece_index: int = -1;
+    current_piece_type: Tetromino;
     rotation_index: int;
 
     game_over: bool;
@@ -162,6 +163,7 @@ update_game :: (using game: *Game)
                 piece.color = Color.{xx r, xx g, xx b, 255};
 
                 current_piece_index = body_index;
+                current_piece_type = piece_type;
                 rotation_index = 0;
 
                 array_add(*tetris_pieces, .{body_index, piece_type, xx piece_type});
@@ -233,8 +235,7 @@ render_game :: (using game: *Game)
         ghost_offset := Vector3.{0, compute_landing_offset(*world, current_piece_index, .[wall1_index, wall2_index]), 0};
         ghost_color := Color.{piece.color.r, piece.color.g, piece.color.b, 200};
 
-        for s : piece.shapes
-            draw_convex_shape_outline(s, offset=ghost_offset, color=ghost_color);
+        draw_tetromino_cells(block_texture, current_piece_type, piece, 50, block_texture_rects[xx current_piece_type], ghost_offset, 100);
     }
 
     for world.bodies
