@@ -90,6 +90,16 @@ main :: ()
     InitWindow(screen_width, screen_height, "Tetris Tower");
     defer CloseWindow();
 
+    block_texture := LoadTexture("ast/tetris-Sheet.png");
+    defer UnloadTexture(block_texture);
+    block_texture_rects: [#run enum_highest_value(Block_Color_Type)+1] Rectangle;
+    for *block_texture_rects
+    {
+        x := it_index * 16;
+        it.* = .{cast(float)x, 0, 16, 16};
+    }
+    tetris_pieces: [..] Tetris_Piece;
+
     camera: Camera2D;
     camera.target = .{};
     camera.offset = .{xx screen_width, xx screen_height};
@@ -101,14 +111,13 @@ main :: ()
     queue: Piece_Queue;
     init_piece_queue(*queue);
 
-    floor := add_body(*world, .{screen_width/2.0, 0, 0}, .{}, .{xx screen_width, 50, 0}, 0);
+    floor_index := add_body(*world, .{screen_width/2.0, 0, 0}, .{}, .{xx screen_width, 50, 0}, 0);
+    floor := *world.bodies[floor_index];
     floor.color = GRAY;
     floor.friction = 0.9;
 
-    add_body(*world, .{0, screen_height/2.0, 0}, .{}, .{50, xx screen_height, 0}, 0);
-    wall1_index := world.bodies.count - 1;
-    add_body(*world, .{xx screen_width, screen_height/2.0, 0}, .{}, .{50, xx screen_height, 0}, 0);
-    wall2_index := world.bodies.count - 1;
+    wall1_index := add_body(*world, .{0, screen_height/2.0, 0}, .{}, .{50, xx screen_height, 0}, 0);
+    wall2_index := add_body(*world, .{xx screen_width, screen_height/2.0, 0}, .{}, .{50, xx screen_height, 0}, 0);
 
     current_piece_index := -1;
     rotation_index := 0;
@@ -142,14 +151,17 @@ main :: ()
                 {
                     piece_type := dequeue_piece(*queue);
 
-                    piece := add_tetromino(*world, piece_type, spawn_pos, CELL_SIZE, PIECE_MASS);
+                    body_index := add_tetromino(*world, piece_type, spawn_pos, CELL_SIZE, PIECE_MASS);
+                    piece := *world.bodies[body_index];
                     r := random_get_zero_to_one_open() * 255;
                     g := random_get_zero_to_one_open() * 255;
                     b := random_get_zero_to_one_open() * 255;
                     piece.color = Color.{xx r, xx g, xx b, 255};
 
-                    current_piece_index = world.bodies.count - 1;
+                    current_piece_index = body_index;
                     rotation_index = 0;
+
+                    array_add(*tetris_pieces, .{body_index, piece_type, xx piece_type});
                 }
             }
         }
@@ -227,12 +239,19 @@ main :: ()
 
         for world.bodies
         {
+            if it.inverse_mass != 0 continue;
+
             for s : it.shapes
             {
                 draw_convex_shape(s, color=it.color);
             }
         }
-            
+
+        for tetris_pieces
+        {
+            draw_tetromino_cells(block_texture, it.type, *world.bodies[it.body_index], CELL_SIZE, block_texture_rects[xx it.color]);
+        }
+
         EndMode2D();
 
         draw_piece_queue(queue);

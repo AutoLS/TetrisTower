@@ -9,6 +9,28 @@ Tetromino :: enum u32
     L;
 }
 
+Block_Color_Type :: enum u32
+{
+    Yellow;
+    Green;
+    Purple;
+    Blue;
+    Orange;
+    Pink;
+    Skyblue;
+    Grey;
+    Sand;
+    Emerald;
+    White;
+}
+
+Tetris_Piece :: struct
+{
+    body_index: int;
+    type:       Tetromino;
+    color:      Block_Color_Type;
+}
+
 get_tetromino_cells :: (type: Tetromino) -> [..] Vector2
 {
     cells: [..] Vector2;
@@ -154,7 +176,7 @@ dequeue_piece :: (queue: *Piece_Queue) -> Tetromino
     return result;
 }
 
-add_tetromino :: (using world: *Simulated_World, type: Tetromino, p: Vector3, cell: float, mass: float, friction: float = 0.5) -> *Rigid_Body
+add_tetromino :: (using world: *Simulated_World, type: Tetromino, p: Vector3, cell: float, mass: float, friction: float = 0.5) -> int
 {
     cells := get_tetromino_cells(type);
     pieces := make_cell_pieces(cells, cell);
@@ -163,5 +185,5 @@ add_tetromino :: (using world: *Simulated_World, type: Tetromino, p: Vector3, ce
     body.friction = friction;
     update_body_shapes(*body);
     array_add(*bodies, body);
-    return *bodies[bodies.count-1];
+    return bodies.count-1;
 }
