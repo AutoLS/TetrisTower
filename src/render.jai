@@ -36,6 +36,21 @@ get_cached_tetromino_cells :: (type: Tetromino) -> [..] Vector2
     return tetromino_preview_cells[cast(int)type];
 }
 
+center_offset :: (container_size: s32, content_size: s32) -> s32
+{
+    return (container_size - content_size) / 2;
+}
+
+draw_game_over :: (screen_width: s32, screen_height: s32)
+{
+    text := "GAME OVER";
+    font_size: s32 = 48;
+    text_width := MeasureText(get_c_string(text), font_size);
+    x := center_offset(screen_width, text_width);
+    y := center_offset(screen_height, font_size);
+    DrawText(get_c_string(text), x, y, font_size, RED);
+}
+
 draw_piece_queue :: (queue: Piece_Queue)
 {
     DrawText(get_c_string("NEXT"), QUEUE_MARGIN_X, QUEUE_MARGIN_Y, 24, BLACK);
@@ -50,8 +65,8 @@ draw_piece_queue :: (queue: Piece_Queue)
         cells := get_cached_tetromino_cells(queue.pieces[i]);
         bounds := get_cell_bounds(cells);
 
-        offset_x := (QUEUE_BOX_SIZE - bounds.width * QUEUE_CELL_SIZE) / 2;
-        offset_y := (QUEUE_BOX_SIZE - bounds.height * QUEUE_CELL_SIZE) / 2;
+        offset_x := center_offset(QUEUE_BOX_SIZE, xx (bounds.width * QUEUE_CELL_SIZE));
+        offset_y := center_offset(QUEUE_BOX_SIZE, xx (bounds.height * QUEUE_CELL_SIZE));
 
         for c : cells
         {
