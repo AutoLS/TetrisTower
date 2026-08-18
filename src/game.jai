@@ -3,10 +3,12 @@ CELL_SIZE :: 50.0;
 PIECE_MASS :: 50.0;
 HARD_DROP_BOOST :: 1500.0;
 SPAWN_DELAY_FRAMES :: 30;
-SPAWN_CLEARANCE :: 150.0;
+SPAWN_CLEARANCE :: 300.0;
 CAMERA_FOLLOW_SPEED :: 0.1;
-BASE_SPAWN_OFFSET :: 150.0;
+BASE_SPAWN_OFFSET :: 250.0;
 STARTING_HP :: 10;
+SLOW_MOTION_SPEED_SCALE :: 0.4;
+DISCARDED_PIECE_POSITION :: Vector3.{-100000, -100000, 0};
 FLOOR_WIDTH_RATIO :: 0.5; // floor spans the middle half of the screen - a quarter is chopped off each side
 // Floor bottom sits at y = -25 (floor is 50 tall, centered on y = 0), so this gives roughly
 // a 2.5-cell buffer of free-fall before a piece counts as lost to the void - enough that a
@@ -27,6 +29,9 @@ Game :: struct
 
     spawn_delay: int;
     spawn_pos: Vector3;
+
+    held_piece_type: Tetromino;
+    has_held_piece: bool;
 
     hp: int = STARTING_HP;
 
@@ -179,6 +184,58 @@ retire_falling_piece :: (using game: *Game)
     spawn_delay = SPAWN_DELAY_FRAMES;
 }
 
+// Creates the physics body for `type` at `position` (with `velocity`, zero by default - new
+// bodies always start at rest, per make_compound_rect_body) and makes it the controlled piece.
+// Shared by normal spawn-from-queue (at spawn_pos, at rest) and hold/swap (at the swapped-out
+// piece's position and velocity) so both paths get identical color randomization, rotation reset,
+// and tracking.
+spawn_piece_at :: (using game: *Game, type: Tetromino, position: Vector3, velocity: Vector3 = .{})
+{
+    body_index := add_tetromino(*world, type, position, CELL_SIZE, PIECE_MASS);
+    piece := *world.bodies[body_index];
+    piece.velocity = velocity;
+    r := random_get_zero_to_one_open() * 255;
+    g := random_get_zero_to_one_open() * 255;
+    b := random_get_zero_to_one_open() * 255;
+    piece.color = Color.{xx r, xx g, xx b, 255};
+
+    current_piece_index = body_index;
+    current_piece_type = type;
+    rotation_index = 0;
+
+    array_add(*tetris_pieces, .{body_index, type, xx type});
+}
+
+spawn_current_piece :: (using game: *Game, type: Tetromino)
+{
+    spawn_piece_at(game, type, spawn_pos);
+}
+
+// The Physics module has no remove-body call, so a piece taken out of play (e.g. by being held)
+// can't be deleted - instead its body is teleported far outside the play area (same "orphaned
+// body" idea check_void_falls relies on, just instant instead of gravity-driven) so its AABB can
+// never overlap anything again, and it's dropped from tetris_pieces so it stops rendering and is
+// excluded from height/void checks. These two steps always belong together: relocating without
+// untracking would leave check_void_falls seeing the body's new off-map position and wrongly
+// charging it as a void loss; untracking without relocating would leave a live, invisible body
+// still colliding with the stack.
+remove_piece_from_play :: (using game: *Game, body_index: int)
+{
+    body := *world.bodies[body_index];
+    body.position = DISCARDED_PIECE_POSITION;
+    body.velocity = .{};
+    update_body_shapes(body);
+
+    for i : 0..tetris_pieces.count-1
+    {
+        if tetris_pieces[i].body_index == body_index
+        {
+            array_unordered_remove_by_index(*tetris_pieces, i);
+            return;
+        }
+    }
+}
+
 update_game :: (using game: *Game)
 {
     if is_game_over(game) return;
@@ -199,31 +256,40 @@ update_game :: (using game: *Game)
         }
         else
         {
-            piece_type := dequeue_piece(*queue);
-
-            body_index := add_tetromino(*world, piece_type, spawn_pos, CELL_SIZE, PIECE_MASS);
-            piece := *world.bodies[body_index];
-            r := random_get_zero_to_one_open() * 255;
-            g := random_get_zero_to_one_open() * 255;
-            b := random_get_zero_to_one_open() * 255;
-            piece.color = Color.{xx r, xx g, xx b, 255};
-
-            current_piece_index = body_index;
-            current_piece_type = piece_type;
-            rotation_index = 0;
-
-            array_add(*tetris_pieces, .{body_index, piece_type, xx piece_type});
+            spawn_current_piece(game, dequeue_piece(*queue));
         }
     }
 
     if current_piece_index != -1
     {
+        if IsKeyPressed(.KEY_C)
+        {
+            old_body_index := current_piece_index;
+            old_type := current_piece_type;
+            old_position := world.bodies[old_body_index].position;
+            old_velocity := world.bodies[old_body_index].velocity;
+
+            remove_piece_from_play(game, old_body_index);
+
+            next_type: Tetromino;
+            if has_held_piece then next_type = held_piece_type;
+            else { next_type = dequeue_piece(*queue); has_held_piece = true; }
+            held_piece_type = old_type;
+
+            // Swap in place - the incoming piece continues from where the swapped-out piece was,
+            // at the same velocity, instead of jumping back up to the spawn point at rest.
+            spawn_piece_at(game, next_type, old_position, old_velocity);
+        }
+
         piece := *world.bodies[current_piece_index];
+
+        slow_motion := IsKeyDown(.KEY_LEFT_SHIFT);
 
         direction := 0.0;
         if IsKeyDown(.KEY_LEFT)  then direction += 1;
         if IsKeyDown(.KEY_RIGHT) then direction -= 1;
-        piece.velocity.x = direction * PIECE_MOVE_SPEED;
+        move_speed := ifx slow_motion then PIECE_MOVE_SPEED * SLOW_MOTION_SPEED_SCALE else PIECE_MOVE_SPEED;
+        piece.velocity.x = direction * move_speed;
 
         delta := 0;
         if IsKeyPressed(.KEY_UP) || IsKeyPressed(.KEY_X)

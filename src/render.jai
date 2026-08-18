@@ -65,6 +65,7 @@ QUEUE_MARGIN_X :: 80; // clears the left wall, which otherwise clips the "NEXT" 
 QUEUE_MARGIN_Y :: 20;
 QUEUE_BOX_SIZE :: 90;
 QUEUE_CELL_SIZE :: 16;
+LABEL_TO_BOX_GAP :: 36; // vertical gap between a "NEXT"/"HOLD" label and its box below it
 
 HUD_MARGIN :: 20;
 
@@ -95,6 +96,24 @@ center_offset :: (container_size: s32, content_size: s32) -> s32
     return (container_size - content_size) / 2;
 }
 
+draw_tetromino_preview_box :: (type: Tetromino, x: s32, y: s32)
+{
+    DrawRectangleLines(x, y, QUEUE_BOX_SIZE, QUEUE_BOX_SIZE, GRAY);
+
+    cells := get_cached_tetromino_cells(type);
+    bounds := get_cell_bounds(cells);
+
+    offset_x := center_offset(QUEUE_BOX_SIZE, xx (bounds.width * QUEUE_CELL_SIZE));
+    offset_y := center_offset(QUEUE_BOX_SIZE, xx (bounds.height * QUEUE_CELL_SIZE));
+
+    for c : cells
+    {
+        px: s32 = xx (x + offset_x + (cast(int)c.y - bounds.min_c) * QUEUE_CELL_SIZE);
+        py: s32 = xx (y + offset_y + (cast(int)c.x - bounds.min_r) * QUEUE_CELL_SIZE);
+        DrawRectangle(px, py, QUEUE_CELL_SIZE - 2, QUEUE_CELL_SIZE - 2, DARKGRAY);
+    }
+}
+
 draw_piece_queue :: (queue: Piece_Queue)
 {
     DrawText(get_c_string("NEXT"), QUEUE_MARGIN_X, QUEUE_MARGIN_Y, 24, BLACK);
@@ -103,22 +122,26 @@ draw_piece_queue :: (queue: Piece_Queue)
     {
         if i >= queue.pieces.count break;
 
-        box_y: s32 = xx (QUEUE_MARGIN_Y + 36 + i * QUEUE_BOX_SIZE);
-        DrawRectangleLines(QUEUE_MARGIN_X, box_y, QUEUE_BOX_SIZE, QUEUE_BOX_SIZE, GRAY);
-
-        cells := get_cached_tetromino_cells(queue.pieces[i]);
-        bounds := get_cell_bounds(cells);
-
-        offset_x := center_offset(QUEUE_BOX_SIZE, xx (bounds.width * QUEUE_CELL_SIZE));
-        offset_y := center_offset(QUEUE_BOX_SIZE, xx (bounds.height * QUEUE_CELL_SIZE));
-
-        for c : cells
-        {
-            px: s32 = xx (QUEUE_MARGIN_X + offset_x + (cast(int)c.y - bounds.min_c) * QUEUE_CELL_SIZE);
-            py: s32 = xx (box_y + offset_y + (cast(int)c.x - bounds.min_r) * QUEUE_CELL_SIZE);
-            DrawRectangle(px, py, QUEUE_CELL_SIZE - 2, QUEUE_CELL_SIZE - 2, DARKGRAY);
-        }
+        box_y: s32 = xx (QUEUE_MARGIN_Y + LABEL_TO_BOX_GAP + i * QUEUE_BOX_SIZE);
+        draw_tetromino_preview_box(queue.pieces[i], QUEUE_MARGIN_X, box_y);
     }
+}
+
+HOLD_GAP_X :: 40; // horizontal gap between the NEXT column and the HOLD box
+HOLD_MARGIN_X :: QUEUE_MARGIN_X + QUEUE_BOX_SIZE + HOLD_GAP_X;
+HOLD_MARGIN_Y :: QUEUE_MARGIN_Y; // aligned with the top of the NEXT column
+
+draw_hold_box :: (game: *Game)
+{
+    box_x: s32 = HOLD_MARGIN_X;
+
+    DrawText(get_c_string("HOLD"), box_x, HOLD_MARGIN_Y, 24, BLACK);
+
+    box_y: s32 = HOLD_MARGIN_Y + LABEL_TO_BOX_GAP;
+    if game.has_held_piece
+        draw_tetromino_preview_box(game.held_piece_type, box_x, box_y);
+    else
+        DrawRectangleLines(box_x, box_y, QUEUE_BOX_SIZE, QUEUE_BOX_SIZE, GRAY);
 }
 
 draw_text_right_aligned :: (text: string, y: s32, font_size: s32, color: Color, screen_width: s32)

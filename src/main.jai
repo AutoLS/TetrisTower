@@ -13,7 +13,7 @@ main :: ()
     random_seed(cast,force(Some_Big_Time_Value)current_time_consensus());
 
     sw: s32 = 1280;
-    sh: s32 = 720;
+    sh: s32 = 900;
 
     InitWindow(sw, sh, "Tetris Tower");
     defer CloseWindow();
@@ -35,6 +35,7 @@ main :: ()
         render_game(*game);
 
         draw_piece_queue(queue);
+        draw_hold_box(*game);
         draw_hud(*game);
 
         EndDrawing();
