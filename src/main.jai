@@ -89,7 +89,7 @@ main :: ()
 
         for tetris_pieces 
         {
-            draw_tetromino_cells_v2(block_texture, it.type, *world.bodies[it.body_index], 50, block_texture_rects[xx it.type]);
+            draw_tetromino_cells(block_texture, it.type, *world.bodies[it.body_index], 50, block_texture_rects[xx it.type]);
         }
             
         EndMode2D();
