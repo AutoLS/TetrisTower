@@ -289,6 +289,11 @@ update_game :: (using game: *Game)
         state = .Paused; return;
     }
 
+    if IsKeyDown(.KEY_LEFT_CONTROL) && IsKeyPressed(.KEY_R)
+    {
+        reset_game(game); return;
+    }
+
     base_spawn_y := screen_height - BASE_SPAWN_OFFSET;
 
     tower_top := get_tower_top(game);
