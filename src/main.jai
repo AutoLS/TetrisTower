@@ -4,6 +4,7 @@
 #import "Math";
 #import "Random";
 
+#load "util.jai";
 #load "tetris.jai";
 #load "render.jai";
 #load "game.jai";
@@ -19,12 +20,28 @@ main :: ()
     defer CloseWindow();
 
     using game := init_game(sw, sh);
+    SetExitKey(.KEY_NULL);
 
     SetTargetFPS(120);
 
     while !WindowShouldClose()
     {
-        update_game(*game);
+        reset_temporary_storage();
+        if game.state ==
+        {
+            case .In_Game; update_game(*game);
+            case .Paused;
+            {
+                if IsKeyPressed(.KEY_ESCAPE) state = .In_Game;
+            }
+            case .Gameover; 
+            {
+                if IsKeyPressed(.KEY_SPACE) || IsKeyPressed(.KEY_ENTER)
+                {
+                    reset_game(*game);
+                }
+            }
+        }
 
         BeginDrawing();
         ClearBackground(RAYWHITE);

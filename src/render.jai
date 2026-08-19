@@ -91,11 +91,6 @@ get_cached_tetromino_cells :: (type: Tetromino) -> [..] Vector2
     return tetromino_preview_cells[cast(int)type];
 }
 
-center_offset :: (container_size: s32, content_size: s32) -> s32
-{
-    return (container_size - content_size) / 2;
-}
-
 draw_tetromino_preview_box :: (type: Tetromino, x: s32, y: s32)
 {
     DrawRectangleLines(x, y, QUEUE_BOX_SIZE, QUEUE_BOX_SIZE, GRAY);
@@ -127,47 +122,16 @@ draw_piece_queue :: (queue: Piece_Queue)
     }
 }
 
-HOLD_GAP_X :: 40; // horizontal gap between the NEXT column and the HOLD box
-HOLD_MARGIN_X :: QUEUE_MARGIN_X + QUEUE_BOX_SIZE + HOLD_GAP_X;
-HOLD_MARGIN_Y :: QUEUE_MARGIN_Y; // aligned with the top of the NEXT column
-
-draw_hold_box :: (game: *Game)
+draw_text_centered :: (text: string, sw: s32, sh: s32, font_size: s32, color: Color)
 {
-    box_x: s32 = HOLD_MARGIN_X;
-
-    DrawText(get_c_string("HOLD"), box_x, HOLD_MARGIN_Y, 24, BLACK);
-
-    box_y: s32 = HOLD_MARGIN_Y + LABEL_TO_BOX_GAP;
-    if game.has_held_piece
-        draw_tetromino_preview_box(game.held_piece_type, box_x, box_y);
-    else
-        DrawRectangleLines(box_x, box_y, QUEUE_BOX_SIZE, QUEUE_BOX_SIZE, GRAY);
+    text_width := MeasureText(temp_c_string(text), font_size);
+    text_x := center_offset(sw, text_width);
+    text_y := center_offset(sh, font_size);
+    DrawText(temp_c_string(text), text_x, text_y, font_size, color);
 }
 
 draw_text_right_aligned :: (text: string, y: s32, font_size: s32, color: Color, screen_width: s32)
 {
     width := MeasureText(get_c_string(text), font_size);
     DrawText(get_c_string(text), screen_width - width - HUD_MARGIN, y, font_size, color);
-}
-
-draw_hud :: (game: *Game)
-{
-    font_size: s32 = 24;
-
-    hp_text := tprint("HP: %", game.hp);
-    draw_text_right_aligned(hp_text, HUD_MARGIN, font_size, BLACK, game.screen_width);
-
-    height_cells := cast(int)(get_tower_top(game) / CELL_SIZE);
-    height_text := tprint("Height: %", height_cells);
-    draw_text_right_aligned(height_text, HUD_MARGIN + font_size + 6, font_size, BLACK, game.screen_width);
-
-    if is_game_over(game)
-    {
-        game_over_font_size: s32 = 48;
-        msg := "GAME OVER";
-        msg_width := MeasureText(get_c_string(msg), game_over_font_size);
-        msg_x := center_offset(game.screen_width, msg_width);
-        msg_y := center_offset(game.screen_height, game_over_font_size);
-        DrawText(get_c_string(msg), msg_x, msg_y, game_over_font_size, RED);
-    }
 }

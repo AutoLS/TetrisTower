@@ -15,14 +15,16 @@ FLOOR_WIDTH_RATIO :: 0.5; // floor spans the middle half of the screen - a quart
 // piece resting right at the floor's edge doesn't false-trigger, but still reacts quickly.
 VOID_Y :: -150.0;
 
-//Auto (TODO): Needs more cleanup
-Game :: struct 
+Game_State :: enum u32
 {
-    block_texture: Texture2D;
-    block_texture_rects: [#run enum_highest_value(Block_Color_Type)+1] Rectangle;
+    Main_Menu;
+    In_Game;
+    Paused;
+    Gameover;
+}
 
-    screen_width, screen_height: s32;
-
+In_Game_Info :: struct
+{
     current_piece_index: int = -1;
     current_piece_type: Tetromino;
     rotation_index: int;
@@ -34,6 +36,17 @@ Game :: struct
     has_held_piece: bool;
 
     hp: int = STARTING_HP;
+}
+
+//Auto (TODO): Needs more cleanup
+Game :: struct 
+{
+    block_texture: Texture2D;
+    block_texture_rects: [#run enum_highest_value(Block_Color_Type)+1] Rectangle;
+
+    screen_width, screen_height: s32;
+
+    in_game_info: In_Game_Info;
 
     camera: Camera2D;
 
@@ -42,6 +55,8 @@ Game :: struct
 
     world: Simulated_World;
 
+    state: Game_State = .In_Game;
+
     //Temp stuff
     floor_index: int;
 }
@@ -49,6 +64,8 @@ Game :: struct
 init_game :: (sw: s32, sh: s32) -> Game
 {
     using game: Game;
+
+    set_physics_gravity(-60);
 
     screen_width = sw;
     screen_height = sh;
@@ -61,7 +78,7 @@ init_game :: (sw: s32, sh: s32) -> Game
     }
     
     init_piece_queue(*game.queue);
-    spawn_pos = Vector3.{screen_width / 2.0, screen_height - BASE_SPAWN_OFFSET, 0};
+    in_game_info.spawn_pos = Vector3.{screen_width * 0.5, screen_height - BASE_SPAWN_OFFSET, 0};
     
     camera.target = .{};
     camera.offset = .{xx screen_width, xx screen_height};
@@ -69,13 +86,35 @@ init_game :: (sw: s32, sh: s32) -> Game
     camera.zoom = -1.0;
 
     floor_width := screen_width * FLOOR_WIDTH_RATIO;
-    floor_index = add_body(*world, .{screen_width/2.0, 0, 0}, .{}, .{floor_width, 50, 0}, 0);
+    floor_index = add_body(*world, .{screen_width*0.5, 0, 0}, .{}, .{floor_width, 50, 0}, 0);
     floor := *world.bodies[floor_index];
     floor.color = GRAY;
     floor.friction = 0.9;
 
     return game;
 }
+
+reset_game :: (using game: *Game)
+{
+    array_reset_keeping_memory(*queue.pieces);
+    array_reset_keeping_memory(*tetris_pieces);
+    array_reset_keeping_memory(*world.bodies);
+
+    init_piece_queue(*queue);
+
+    in_game_info = .{};
+    in_game_info.spawn_pos = Vector3.{screen_width * 0.5, screen_height - BASE_SPAWN_OFFSET, 0};
+
+    camera.target = .{};
+
+    floor_width := screen_width * FLOOR_WIDTH_RATIO;
+    floor_index = add_body(*world, .{screen_width*0.5, 0, 0}, .{}, .{floor_width, 50, 0}, 0);
+    floor := *world.bodies[floor_index];
+    floor.color = GRAY;
+    floor.friction = 0.9;
+
+    state = .In_Game;
+}  
 
 // Simple per-shape straight-down projection used for the ghost/landing indicator: for each of
 // the falling piece's shapes, find the highest surface directly below it (by x-overlap, among
@@ -142,7 +181,7 @@ get_tower_top :: (using game: *Game) -> float
     top := 0.0;
     for tetris_pieces
     {
-        if it.body_index == current_piece_index continue;
+        if it.body_index == in_game_info.current_piece_index continue;
         top = max(top, get_body_top(*world, it.body_index));
     }
     return top;
@@ -164,10 +203,10 @@ check_void_falls :: (using game: *Game)
         piece := tetris_pieces[i];
         if is_body_in_void(*world, piece.body_index)
         {
-            if piece.body_index == current_piece_index
+            if piece.body_index == in_game_info.current_piece_index
                 retire_falling_piece(game);
             array_unordered_remove_by_index(*tetris_pieces, i);
-            hp = max(hp - 1, 0);
+            in_game_info.hp = max(in_game_info.hp - 1, 0);
         }
         i -= 1;
     }
@@ -175,13 +214,13 @@ check_void_falls :: (using game: *Game)
 
 is_game_over :: (using game: *Game) -> bool
 {
-    return hp <= 0;
+    return in_game_info.hp <= 0;
 }
 
 retire_falling_piece :: (using game: *Game)
 {
-    current_piece_index = -1;
-    spawn_delay = SPAWN_DELAY_FRAMES;
+    in_game_info.current_piece_index = -1;
+    in_game_info.spawn_delay = SPAWN_DELAY_FRAMES;
 }
 
 // Creates the physics body for `type` at `position` (with `velocity`, zero by default - new
@@ -199,16 +238,16 @@ spawn_piece_at :: (using game: *Game, type: Tetromino, position: Vector3, veloci
     b := random_get_zero_to_one_open() * 255;
     piece.color = Color.{xx r, xx g, xx b, 255};
 
-    current_piece_index = body_index;
-    current_piece_type = type;
-    rotation_index = 0;
+    in_game_info.current_piece_index = body_index;
+    in_game_info.current_piece_type = type;
+    in_game_info.rotation_index = 0;
 
     array_add(*tetris_pieces, .{body_index, type, xx type});
 }
 
 spawn_current_piece :: (using game: *Game, type: Tetromino)
 {
-    spawn_piece_at(game, type, spawn_pos);
+    spawn_piece_at(game, type, in_game_info.spawn_pos);
 }
 
 // The Physics module has no remove-body call, so a piece taken out of play (e.g. by being held)
@@ -238,7 +277,17 @@ remove_piece_from_play :: (using game: *Game, body_index: int)
 
 update_game :: (using game: *Game)
 {
-    if is_game_over(game) return;
+    using game.in_game_info;
+
+    if is_game_over(game)
+    {
+        state = .Gameover;
+    }
+
+    if IsKeyPressed(.KEY_ESCAPE)
+    {
+        state = .Paused;
+    }
 
     base_spawn_y := screen_height - BASE_SPAWN_OFFSET;
 
@@ -333,8 +382,49 @@ update_game :: (using game: *Game)
     check_void_falls(game);
 }
 
+HOLD_GAP_X :: 40; // horizontal gap between the NEXT column and the HOLD box
+HOLD_MARGIN_X :: QUEUE_MARGIN_X + QUEUE_BOX_SIZE + HOLD_GAP_X;
+HOLD_MARGIN_Y :: QUEUE_MARGIN_Y; // aligned with the top of the NEXT column
+
+draw_hold_box :: (game: *Game)
+{
+    box_x: s32 = HOLD_MARGIN_X;
+
+    DrawText(get_c_string("HOLD"), box_x, HOLD_MARGIN_Y, 24, BLACK);
+
+    box_y: s32 = HOLD_MARGIN_Y + LABEL_TO_BOX_GAP;
+    if game.in_game_info.has_held_piece
+        draw_tetromino_preview_box(game.in_game_info.held_piece_type, box_x, box_y);
+    else
+        DrawRectangleLines(box_x, box_y, QUEUE_BOX_SIZE, QUEUE_BOX_SIZE, GRAY);
+}
+
+draw_hud :: (game: *Game)
+{
+    font_size: s32 = 24;
+
+    hp_text := tprint("HP: %", game.in_game_info.hp);
+    draw_text_right_aligned(hp_text, HUD_MARGIN, font_size, BLACK, game.screen_width);
+
+    height_cells := cast(int)(get_tower_top(game) / CELL_SIZE);
+    height_text := tprint("Height: %", height_cells);
+    draw_text_right_aligned(height_text, HUD_MARGIN + font_size + 6, font_size, BLACK, game.screen_width);
+
+    if game.state == .Paused
+    {
+        draw_text_centered("PAUSED", game.screen_width, game.screen_height, 48, BLACK);
+    }
+
+    if game.state == .Gameover
+    {
+        draw_text_centered("GAME OVER", game.screen_width, game.screen_height, 48, RED);
+    }
+}
+
 render_game :: (using game: *Game)
 {
+    using game.in_game_info;
+    
     BeginMode2D(camera);
 
     if current_piece_index != -1
