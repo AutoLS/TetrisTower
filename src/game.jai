@@ -281,12 +281,12 @@ update_game :: (using game: *Game)
 
     if is_game_over(game)
     {
-        state = .Gameover;
+        state = .Gameover; return;
     }
 
     if IsKeyPressed(.KEY_ESCAPE)
     {
-        state = .Paused;
+        state = .Paused; return;
     }
 
     base_spawn_y := screen_height - BASE_SPAWN_OFFSET;
