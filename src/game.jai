@@ -236,8 +236,7 @@ compute_freeze_threshold_cells :: (height_cells: int) -> int
 
 REST_SPEED_SQUARED :: 25.0; // (units/sec)^2 threshold for "at rest"
 
-// Freezes landed, at-rest pieces below the current height threshold, and thaws any that are no
-// longer below it. Skips the currently-falling piece so a hard-dropped piece can't dodge the void check.
+// Freezes landed, at-rest pieces below the current height threshold, and thaws any that are no longer below it. Skips the currently-falling piece so a hard-dropped piece can't dodge the void check.
 update_piece_freezing :: (using game: *Game)
 {
     threshold_cells := compute_freeze_threshold_cells(get_tower_height_cells(game));
@@ -254,12 +253,14 @@ update_piece_freezing :: (using game: *Game)
 
         if at_rest && top <= threshold_y
         {
+            it.freezed = true;
             body.inverse_mass = 0;
             body.velocity = .{};
             body.angular_velocity = .{};
         }
         else if body.inverse_mass == 0 && top > threshold_y
         {
+            it.freezed = false;
             body.inverse_mass = 1.0 / PIECE_MASS;
         }
     }
@@ -292,7 +293,12 @@ spawn_piece_at :: (using game: *Game, type: Tetromino, position: Vector3, veloci
     in_game_info.current_piece_type = type;
     in_game_info.rotation_index = 0;
 
-    array_add(*tetris_pieces, .{body_index, type, xx type, false});
+    tetris_piece: Tetris_Piece;
+    tetris_piece.body_index = body_index;
+    tetris_piece.type = type;
+    tetris_piece.color = xx type;
+
+    array_add(*tetris_pieces, tetris_piece);
 }
 
 spawn_current_piece :: (using game: *Game, type: Tetromino)
@@ -505,7 +511,14 @@ render_game :: (using game: *Game)
 
     for tetris_pieces
     {
-        draw_tetromino_cells(block_texture, it.type, *world.bodies[it.body_index], CELL_SIZE, block_texture_rects[xx it.color]);
+        if !it.freezed
+        {
+            draw_tetromino_cells(block_texture, it.type, *world.bodies[it.body_index], CELL_SIZE, block_texture_rects[xx it.color]);
+        }
+        else
+        {
+            draw_tetromino_cells(block_texture, it.type, *world.bodies[it.body_index], CELL_SIZE, block_texture_rects[xx Block_Color_Type.Grey]);
+        }
     }
 
     EndMode2D();
