@@ -19,6 +19,19 @@ main :: ()
     InitWindow(sw, sh, "Tetris Tower");
     defer CloseWindow();
 
+    InitAudioDevice();
+
+    bgm := LoadMusicStream("ast/bgm.mp3");
+
+    PlayMusicStream(bgm);
+    pause_music := false;
+    pan := 0.0;
+    SetMusicPan(bgm, pan);
+
+    volume := 0.5;
+    SetMusicVolume(bgm, volume);
+    SeekMusicStream(bgm, 1.0);
+
     using game := init_game(sw, sh);
     SetExitKey(.KEY_NULL);
 
@@ -27,6 +40,9 @@ main :: ()
     while !WindowShouldClose()
     {
         reset_temporary_storage();
+
+        UpdateMusicStream(bgm);
+
         if game.state ==
         {
             case .In_Game; update_game(*game);
