@@ -29,6 +29,7 @@ Tetris_Piece :: struct
     body_index: int;
     type:       Tetromino;
     color:      Block_Color_Type;
+    settled: bool; // latches true once observed at rest; never cleared
 }
 
 get_tetromino_cells :: (type: Tetromino) -> [..] Vector2
