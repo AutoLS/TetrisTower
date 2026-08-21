@@ -3,5 +3,5 @@
 *.pdb
 *.lib
 *.exp
-
+build/
 notes
