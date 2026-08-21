@@ -63,11 +63,9 @@ main :: ()
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        update_main_menu(*game);
-
         if game.state == 
         {
-            case .Main_Menu; 
+            case .Main_Menu; update_main_menu(*game);
             case .In_Game; #through;
             case .Paused; #through;
             case .Gameover; 
