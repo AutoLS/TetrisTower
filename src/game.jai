@@ -493,6 +493,7 @@ draw_hud :: (game: *Game)
     if game.state == .Gameover
     {
         draw_text_centered("GAME OVER", game.screen_width, game.screen_height, 48, RED);
+        draw_text_centered("Press spacebar to continue...", offset=.{0, 100}, game.screen_width, game.screen_height, 30, Color.{255, 0, 0, xx abs(255 * cos(GetTime()))});
     }
 }
 
