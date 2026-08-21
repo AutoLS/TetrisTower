@@ -65,9 +65,13 @@ main :: ()
 
         if game.state == 
         {
-            case .Main_Menu; update_main_menu(*game);
+            case .Main_Menu;
+            {
+                if slider("BGM Volume", .{}, *volume, 0, 1) SetMusicVolume(bgm, volume);
+                update_main_menu(*game);
+            } 
+            case .Paused; update_paused_menu(*game);
             case .In_Game; #through;
-            case .Paused; #through;
             case .Gameover; 
             {
                 flip_y := MatrixScale(1.0, -1.0, 1.0);

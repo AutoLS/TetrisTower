@@ -130,6 +130,14 @@ draw_text_centered :: (text: string, sw: s32, sh: s32, font_size: s32, color: Co
     DrawText(temp_c_string(text), text_x, text_y, font_size, color);
 }
 
+draw_text_centered :: (text: string, offset: Vector2, sw: s32, sh: s32, font_size: s32, color: Color)
+{
+    text_width := MeasureText(temp_c_string(text), font_size);
+    text_x := center_offset(sw, text_width) + offset.x;
+    text_y := center_offset(sh, font_size) + offset.y;
+    DrawText(temp_c_string(text), xx text_x, xx text_y, font_size, color);
+}
+
 draw_text_right_aligned :: (text: string, y: s32, font_size: s32, color: Color, screen_width: s32)
 {
     width := MeasureText(get_c_string(text), font_size);

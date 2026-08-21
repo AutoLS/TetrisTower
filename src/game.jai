@@ -327,6 +327,22 @@ update_main_menu :: (using game: *Game)
     }
 }
 
+update_paused_menu :: (using game: *Game)
+{
+    draw_text_centered("PAUSED", .{0, -300}, screen_width, screen_height, 50, YELLOW);
+
+    if text_button("Continue", .{screen_width*0.5, screen_height*0.5}, 48, BLACK)
+    {
+        game.state = .In_Game;
+    }
+
+    if text_button("Back to main menu", .{screen_width*0.5, screen_height*0.5 + 98}, 48, BLACK)
+    {
+        reset_game(game);
+        game.state = .Main_Menu;
+    }
+}
+
 update_game :: (using game: *Game)
 {
     using game.in_game_info;
@@ -473,11 +489,6 @@ draw_hud :: (game: *Game)
 
     height_text := tprint("Height: %", get_tower_height_cells(game));
     draw_text_right_aligned(height_text, HUD_MARGIN + font_size + 6, font_size, BLACK, game.screen_width);
-
-    if game.state == .Paused
-    {
-        draw_text_centered("PAUSED", game.screen_width, game.screen_height, 48, BLACK);
-    }
 
     if game.state == .Gameover
     {
