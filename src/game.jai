@@ -10,7 +10,7 @@ MIN_ZOOM_MAGNITUDE :: 0.5; // furthest the camera will zoom out
 ZOOM_MAX_DELTA :: 0.002; // max zoom change per frame
 BASE_SPAWN_OFFSET :: 100.0;
 STARTING_HP :: 10;
-SLOW_MOTION_SPEED_SCALE :: 0.4;
+SLOW_MOTION_SPEED_SCALE :: 0.2;
 DISCARDED_PIECE_POSITION :: Vector3.{-100000, -100000, 0};
 FLOOR_WIDTH_RATIO :: 0.5; 
 VOID_Y :: -150.0;
