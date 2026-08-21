@@ -144,8 +144,6 @@ Piece_Queue :: struct
     pieces: [..] Tetromino;
 }
 
-// Fisher-Yates shuffle of one of each Tetromino type ("7-bag"), appended to the queue.
-// Random.jai has no shuffle/pick-without-replacement helper, so this is hand-rolled on top of random_get().
 refill_bag :: (queue: *Piece_Queue)
 {
     bag: [..] Tetromino;

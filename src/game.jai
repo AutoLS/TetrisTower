@@ -57,7 +57,7 @@ Game :: struct
 
     world: Simulated_World;
 
-    state: Game_State = .In_Game;
+    state: Game_State = .Main_Menu;
 
     //Temp stuff
     floor_index: int;
@@ -124,8 +124,7 @@ reset_game :: (using game: *Game)
     state = .In_Game;
 }
 
-// Straight-down projection for the ghost/landing indicator: finds the nearest surface below each
-// shape and returns the smallest drop distance. found_surface is false if nothing is beneath the piece.
+// Straight-down projection for the ghost/landing indicator: finds the nearest surface below each shape and returns the smallest drop distance. found_surface is false if nothing is beneath the piece.
 compute_landing_offset :: (world: *Simulated_World, piece_index: int) -> float, bool
 {
     piece := world.bodies[piece_index];
@@ -151,9 +150,7 @@ compute_landing_offset :: (world: *Simulated_World, piece_index: int) -> float, 
 
         for o_aabb : other_aabbs
         {
-            // Only a surface actually beneath this shape's bottom edge can support it - an AABB
-            // that merely shares its x-range (e.g. from a tilted, settled piece whose bounding
-            // box overhangs its real footprint) is not a valid landing candidate.
+            // Only a surface actually beneath this shape's bottom edge can support it - an AABB that merely shares its x-range (e.g. from a tilted, settled piece whose bounding box overhangs its real footprint) is not a valid landing candidate.
             if o_aabb.max.y <= s_aabb.min.y && s_aabb.min.x <= o_aabb.max.x && s_aabb.max.x >= o_aabb.min.x
             {
                 surface_y = max(surface_y, o_aabb.max.y);
@@ -176,8 +173,7 @@ get_body_top :: (world: *Simulated_World, body_index: int) -> float
     return top;
 }
 
-// Highest point of any landed piece (excludes the currently-falling one). With require_settled,
-// also skips pieces not yet marked settled - used only for the camera so landing jitter doesn't leak in.
+// Highest point of any landed piece (excludes the currently-falling one). With require_settled, also skips pieces not yet marked settled - used only for the camera so landing jitter doesn't leak in.
 compute_tower_top :: (using game: *Game, require_settled: bool) -> float
 {
     top := 0.0;
@@ -277,8 +273,7 @@ retire_falling_piece :: (using game: *Game)
     in_game_info.spawn_delay = SPAWN_DELAY_FRAMES;
 }
 
-// Creates the physics body for `type` at `position`/`velocity` and makes it the controlled piece.
-// Shared by normal spawn-from-queue and hold/swap.
+// Creates the physics body for `type` at `position`/`velocity` and makes it the controlled piece. Shared by normal spawn-from-queue and hold/swap.
 spawn_piece_at :: (using game: *Game, type: Tetromino, position: Vector3, velocity: Vector3 = .{})
 {
     body_index := add_tetromino(*world, type, position, CELL_SIZE, PIECE_MASS);
@@ -306,8 +301,7 @@ spawn_current_piece :: (using game: *Game, type: Tetromino)
     spawn_piece_at(game, type, in_game_info.spawn_pos);
 }
 
-// The Physics module can't delete bodies, so a piece taken out of play is teleported off-map
-// instead and dropped from tetris_pieces so it stops rendering and colliding.
+// The Physics module can't delete bodies, so a piece taken out of play is teleported off-map instead and dropped from tetris_pieces so it stops rendering and colliding.
 remove_piece_from_play :: (using game: *Game, body_index: int)
 {
     body := *world.bodies[body_index];
@@ -322,6 +316,14 @@ remove_piece_from_play :: (using game: *Game, body_index: int)
             array_unordered_remove_by_index(*tetris_pieces, i);
             return;
         }
+    }
+}
+
+update_main_menu :: (using game: *Game)
+{
+    if text_button("Start", .{screen_width*0.5, screen_height*0.5}, 48, BLACK) 
+    {
+        game.state = .In_Game;
     }
 }
 
@@ -349,8 +351,7 @@ update_game :: (using game: *Game)
     tower_top := get_tower_top(game);
     spawn_pos.y = max(base_spawn_y, tower_top + SPAWN_CLEARANCE);
 
-    // Camera follows the settled tower height (not the live one) to avoid landing jitter. It zooms
-    // out to keep the floor and reaction room in view, then falls back to panning past MIN_ZOOM_MAGNITUDE.
+    // Camera follows the settled tower height (not the live one) to avoid landing jitter. It zooms out to keep the floor and reaction room in view, then falls back to panning past MIN_ZOOM_MAGNITUDE.
     settled_top := get_settled_tower_top(game);
     required_top := cast(float)screen_height + max(0.0, settled_top - CAMERA_REACT_HEIGHT_CELLS * CELL_SIZE);
 

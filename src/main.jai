@@ -7,6 +7,7 @@
 #load "util.jai";
 #load "tetris.jai";
 #load "render.jai";
+#load "ui.jai";
 #load "game.jai";
 
 main :: ()
@@ -62,14 +63,25 @@ main :: ()
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        flip_y := MatrixScale(1.0, -1.0, 1.0);
-        rlSetMatrixModelview(flip_y);
+        update_main_menu(*game);
 
-        render_game(*game);
+        if game.state == 
+        {
+            case .Main_Menu; 
+            case .In_Game; #through;
+            case .Paused; #through;
+            case .Gameover; 
+            {
+                flip_y := MatrixScale(1.0, -1.0, 1.0);
+                rlSetMatrixModelview(flip_y);
 
-        draw_piece_queue(queue);
-        draw_hold_box(*game);
-        draw_hud(*game);
+                render_game(*game);
+
+                draw_piece_queue(queue);
+                draw_hold_box(*game);
+                draw_hud(*game);
+            }
+        }
 
         EndDrawing();
     }
